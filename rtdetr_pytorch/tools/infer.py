@@ -21,7 +21,7 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
 
     font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ARIAL.TTF")
     try:
-        font = ImageFont.truetype(font_path, size=100)
+        font = ImageFont.truetype(font_path, size=25)
     except OSError:
         font = ImageFont.load_default()  # fallback
         
