@@ -40,7 +40,7 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
 
         for j, b in enumerate(box):
             b = b.tolist()
-            draw_obj.rectangle(b, outline='yellow', width=10)
+            draw_obj.rectangle(b, outline='yellow', width=3)
             draw_obj.text(
                 (b[0], b[1]),
                 text=f"label: {lab[j].item()} {round(scrs[j].item(),2)}",
