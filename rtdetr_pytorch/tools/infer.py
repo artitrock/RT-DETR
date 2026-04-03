@@ -20,7 +20,7 @@ from src.solver import TASKS
 def draw(images, labels, boxes, scores, thrh=0.6, path=""):
     
     try:
-        font = ImageFont.truetype("../../fonts/ARIAL.TTF", size=20)
+        font = ImageFont.truetype("ARIAL.TTF", size=20)
     except OSError:
         font = ImageFont.load_default()  # fallback
         
