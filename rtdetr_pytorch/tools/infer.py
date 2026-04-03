@@ -18,7 +18,12 @@ from src.solver import TASKS
 # ✅ draw (แก้ warning + output name)
 # =========================
 def draw(images, labels, boxes, scores, thrh=0.6, path=""):
-    font = ImageFont.truetype("arial.ttf", size=20)
+    
+    try:
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", size=20)
+    except OSError:
+        font = ImageFont.load_default()  # fallback
+        
     for i, im in enumerate(images):
         draw = ImageDraw.Draw(im)
 
