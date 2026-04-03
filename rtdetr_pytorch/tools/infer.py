@@ -43,7 +43,7 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
             # ✅ NEW (แปลงเป็น list ปกติ)
             b = b.tolist()
 
-            draw.rectangle(b, outline='red')
+            draw.rectangle(b, outline='green', width=3)
             draw.text(
                 (b[0], b[1]),
                 text=f"label: {lab[j].item()} {round(scrs[j].item(),2)}",
