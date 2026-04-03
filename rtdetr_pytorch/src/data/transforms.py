@@ -1,18 +1,22 @@
-""""by lyuwenyu
+"""by lyuwenyu
 """
-
 
 import torch 
 import torch.nn as nn 
 
 import torchvision
 torchvision.disable_beta_transforms_warning()
-from torchvision import datapoints
+
+# ❌ OLD (ลบ)
+# from torchvision import datapoints
+
+# ✅ NEW
+from torchvision.tv_tensors import BoundingBoxes, Mask, Image
 
 import torchvision.transforms.v2 as T
 import torchvision.transforms.v2.functional as F
 
-from PIL import Image 
+from PIL import Image as PILImage
 from typing import Any, Dict, List, Optional
 
 from src.core import register, GLOBAL_CONFIG
@@ -21,17 +25,21 @@ from src.core import register, GLOBAL_CONFIG
 __all__ = ['Compose', ]
 
 
+# ❌ OLD
+# ToImageTensor = register(T.ToImageTensor)
+# ConvertDtype = register(T.ConvertDtype)
+# SanitizeBoundingBox = register(T.SanitizeBoundingBox)
+
+# ✅ NEW
 RandomPhotometricDistort = register(T.RandomPhotometricDistort)
 RandomZoomOut = register(T.RandomZoomOut)
-# RandomIoUCrop = register(T.RandomIoUCrop)
 RandomHorizontalFlip = register(T.RandomHorizontalFlip)
 Resize = register(T.Resize)
-ToImageTensor = register(T.ToImageTensor)
-ConvertDtype = register(T.ConvertDtype)
-SanitizeBoundingBox = register(T.SanitizeBoundingBox)
+ToImage = register(T.ToImage)
+ToDtype = register(T.ToDtype)
+SanitizeBoundingBoxes = register(T.SanitizeBoundingBoxes)
 RandomCrop = register(T.RandomCrop)
 Normalize = register(T.Normalize)
-
 
 
 @register
@@ -44,10 +52,8 @@ class Compose(T.Compose):
                     name = op.pop('type')
                     transfom = getattr(GLOBAL_CONFIG[name]['_pymodule'], name)(**op)
                     transforms.append(transfom)
-                    # op['type'] = name
                 elif isinstance(op, nn.Module):
                     transforms.append(op)
-
                 else:
                     raise ValueError('')
         else:
@@ -68,13 +74,24 @@ class EmptyTransform(T.Transform):
 
 @register
 class PadToSize(T.Pad):
+
+    # ❌ OLD
+    # _transformed_types = (
+    #     Image.Image,
+    #     datapoints.Image,
+    #     datapoints.Video,
+    #     datapoints.Mask,
+    #     datapoints.BoundingBox,
+    # )
+
+    # ✅ NEW
     _transformed_types = (
-        Image.Image,
-        datapoints.Image,
-        datapoints.Video,
-        datapoints.Mask,
-        datapoints.BoundingBox,
+        PILImage,
+        Image,
+        Mask,
+        BoundingBoxes,
     )
+
     def _get_params(self, flat_inputs: List[Any]) -> Dict[str, Any]:
         sz = F.get_spatial_size(flat_inputs[0])
         h, w = self.spatial_size[0] - sz[0], self.spatial_size[1] - sz[1]
@@ -94,7 +111,7 @@ class PadToSize(T.Pad):
     def _transform(self, inpt: Any, params: Dict[str, Any]) -> Any:        
         fill = self._fill[type(inpt)]
         padding = params['padding']
-        return F.pad(inpt, padding=padding, fill=fill, padding_mode=self.padding_mode)  # type: ignore[arg-type]
+        return F.pad(inpt, padding=padding, fill=fill, padding_mode=self.padding_mode)
 
     def transform(self, inpt: Any, params: Dict[str, Any]) -> Any:
         return self._transform(inpt, params)
@@ -121,28 +138,44 @@ class RandomIoUCrop(T.RandomIoUCrop):
 
 @register
 class ConvertBox(T.Transform):
-    _transformed_types = (
-        datapoints.BoundingBox,
-    )
+
+    # ❌ OLD
+    # _transformed_types = (
+    #     datapoints.BoundingBox,
+    # )
+
+    # ✅ NEW
+    _transformed_types = (BoundingBoxes,)
+
     def __init__(self, out_fmt='', normalize=False) -> None:
         super().__init__()
         self.out_fmt = out_fmt
         self.normalize = normalize
 
-        self.data_fmt = {
-            'xyxy': datapoints.BoundingBoxFormat.XYXY,
-            'cxcywh': datapoints.BoundingBoxFormat.CXCYWH
-        }
-
     def _transform(self, inpt: Any, params: Dict[str, Any]) -> Any:  
         if self.out_fmt:
-            spatial_size = inpt.spatial_size
-            in_fmt = inpt.format.value.lower()
-            inpt = torchvision.ops.box_convert(inpt, in_fmt=in_fmt, out_fmt=self.out_fmt)
-            inpt = datapoints.BoundingBox(inpt, format=self.data_fmt[self.out_fmt], spatial_size=spatial_size)
+            h, w = inpt.canvas_size
+
+            # ❌ OLD
+            # in_fmt = inpt.format.value.lower()
+            # inpt = datapoints.BoundingBox(...)
+
+            # ✅ NEW
+            inpt = torchvision.ops.box_convert(
+                inpt,
+                in_fmt=inpt.format,
+                out_fmt=self.out_fmt
+            )
+            inpt = BoundingBoxes(
+                inpt,
+                format=self.out_fmt,
+                canvas_size=(h, w)
+            )
         
         if self.normalize:
-            inpt = inpt / torch.tensor(inpt.spatial_size[::-1]).tile(2)[None]
+            h, w = inpt.canvas_size
+            scale = torch.tensor([w, h, w, h], device=inpt.device)
+            inpt = inpt / scale
 
         return inpt
 
