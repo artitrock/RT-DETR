@@ -25,12 +25,7 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
         font = ImageFont.load_default()  # fallback
         
     for i, im in enumerate(images):
-        draw = ImageDraw.Draw(im)
-
-        # ❌ OLD
-        # scr = scores[i]
-        # lab = labels[i][scr > thrh]
-        # box = boxes[i][scr > thrh]
+        draw_obj = ImageDraw.Draw(im)
 
         # ✅ NEW (detach ป้องกัน warning)
         scr = scores[i].detach().cpu()
@@ -43,23 +38,14 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
         scrs = scr[mask]
 
         for j, b in enumerate(box):
-            # ❌ OLD
-            # draw.rectangle(list(b), ...)
-
-            # ✅ NEW (แปลงเป็น list ปกติ)
             b = b.tolist()
-
-            draw.rectangle(b, outline='yellow', width=10)
-            draw.text(
+            draw_obj.rectangle(b, outline='yellow', width=10)
+            draw_obj.text(
                 (b[0], b[1]),
                 text=f"label: {lab[j].item()} {round(scrs[j].item(),2)}",
                 font=font,
                 fill='blue'
             )
-
-        # ❌ OLD
-        # if path == "":
-        #     im.save(f'results_{i}.jpg')
 
         # ✅ NEW (รองรับชื่อไฟล์)
         if path == "":
@@ -72,7 +58,10 @@ def main(args):
     cfg = YAMLConfig(args.config, resume=args.resume)
 
     if args.resume:
-        checkpoint = torch.load(args.resume, map_location='cpu') 
+        # =========================
+        # ✅ โหลด checkpoint บน device ที่ต้องการ
+        # =========================
+        checkpoint = torch.load(args.resume, map_location=args.device)  # เปลี่ยนจาก cpu
         if 'ema' in checkpoint:
             state = checkpoint['ema']['module']
         else:
@@ -85,8 +74,11 @@ def main(args):
     class Model(nn.Module):
         def __init__(self):
             super().__init__()
-            self.model = cfg.model.deploy()
-            self.postprocessor = cfg.postprocessor.deploy()
+            # =========================
+            # ✅ deploy model + postprocessor ไป device
+            # =========================
+            self.model = cfg.model.deploy().to(args.device)
+            self.postprocessor = cfg.postprocessor.deploy().to(args.device)
             
         def forward(self, images, orig_target_sizes):
             outputs = self.model(images)
@@ -126,9 +118,6 @@ def main(args):
 
                 labels, boxes, scores = output
 
-                # ❌ OLD
-                # labels = labels.cpu().detach().numpy()
-
                 # ✅ NEW
                 labels = labels.detach().cpu().numpy()
                 boxes = boxes.detach().cpu().numpy()
@@ -160,4 +149,12 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, default='output.jpg')
 
     args = parser.parse_args()
+
+    # =========================
+    # ✅ ตรวจสอบว่า GPU ใช้ได้จริง
+    # =========================
+    if args.device.startswith('cuda') and not torch.cuda.is_available():
+        print("CUDA ไม่สามารถใช้ได้ ใช้ CPU แทน")
+        args.device = 'cpu'
+
     main(args)
