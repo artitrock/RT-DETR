@@ -18,6 +18,7 @@ from src.solver import TASKS
 # ✅ draw (แก้ warning + output name)
 # =========================
 def draw(images, labels, boxes, scores, thrh=0.6, path=""):
+    font = ImageFont.truetype("arial.ttf", size=20)
     for i, im in enumerate(images):
         draw = ImageDraw.Draw(im)
 
@@ -43,11 +44,11 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
             # ✅ NEW (แปลงเป็น list ปกติ)
             b = b.tolist()
 
-            draw.rectangle(b, outline='green', width=3)
+            draw.rectangle(b, outline='green', width=5)
             draw.text(
                 (b[0], b[1]),
                 text=f"label: {lab[j].item()} {round(scrs[j].item(),2)}",
-                font=ImageFont.load_default(),
+                font=font,
                 fill='blue'
             )
 
