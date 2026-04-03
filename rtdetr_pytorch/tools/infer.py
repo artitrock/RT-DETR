@@ -20,7 +20,7 @@ from src.solver import TASKS
 def draw(images, labels, boxes, scores, thrh=0.6, path=""):
     
     try:
-        font = ImageFont.truetype("../fonts/arial.ttf", size=20)
+        font = ImageFont.truetype("../../fonts/arial.ttf", size=20)
     except OSError:
         font = ImageFont.load_default()  # fallback
         
@@ -49,7 +49,7 @@ def draw(images, labels, boxes, scores, thrh=0.6, path=""):
             # ✅ NEW (แปลงเป็น list ปกติ)
             b = b.tolist()
 
-            draw.rectangle(b, outline='green', width=5)
+            draw.rectangle(b, outline='yellow', width=10)
             draw.text(
                 (b[0], b[1]),
                 text=f"label: {lab[j].item()} {round(scrs[j].item(),2)}",
